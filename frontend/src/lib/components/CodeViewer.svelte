@@ -1,28 +1,28 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { writable } from 'svelte/store';
   import { afterNavigate } from '$app/navigation';
+  import { writable } from 'svelte/store';
+  import { fade } from 'svelte/transition';
 
-  import { codeFiles, setCodeViewerOpen } from '$lib/stores/codeFiles';
+  import {
+    codeFiles,
+    isCodeViewerOpen,
+    setCodeViewerOpen,
+    useInlineCodeTrigger
+  } from '$lib/stores/codeFiles';
 
   export let files: string[] | undefined = undefined;
 
   let fileList: string[] = [];
 
-  const isOpenStore = writable(false);
   const selectedIndexStore = writable(0);
   const contentsStore = writable<Record<string, string>>({});
 
   function toggle() {
-    isOpenStore.update((v) => {
-      const newValue = !v;
-      setCodeViewerOpen(newValue);
-      return newValue;
-    });
+    setCodeViewerOpen(!$isCodeViewerOpen);
   }
 
   function close() {
-    isOpenStore.set(false);
     setCodeViewerOpen(false);
   }
 
@@ -30,7 +30,7 @@
     const ext = path.split('.').pop()?.toLowerCase();
     const languageMap: Record<string, string> = {
       'js': 'javascript',
-      'ts': 'typescript', 
+      'ts': 'typescript',
       'jsx': 'javascript',
       'tsx': 'typescript',
       'svelte': 'javascript',
@@ -51,7 +51,6 @@
     return languageMap[ext || ''] || 'plaintext';
   }
 
-  // Promise cache to avoid loading the highlighter multiple times
   let highlighterPromise: Promise<void> | null = null;
 
   function ensureHighlighter(): Promise<void> {
@@ -108,7 +107,6 @@
   function switchToTab(index: number) {
     if (index >= 0 && index < fileList.length) {
       selectedIndexStore.set(index);
-      // Re-highlight the new content after DOM updates
       (async () => {
         await tick();
         await ensureHighlighter();
@@ -118,7 +116,7 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape' && $isOpenStore) {
+    if (event.key === 'Escape' && $isCodeViewerOpen) {
       close();
     }
   }
@@ -126,7 +124,7 @@
   let codeFilesUnsubscribe: (() => void) | null = null;
 
   export function isViewerOpen() {
-    return $isOpenStore;
+    return $isCodeViewerOpen;
   }
 
   onMount(() => {
@@ -151,7 +149,6 @@
       }
     });
 
-    // Listen for keyboard events
     window.addEventListener('keydown', handleKeydown);
 
     return () => {
@@ -162,7 +159,6 @@
     };
   });
 
-  // Close viewer when navigating to a new page, but preserve files if viewer is open
   afterNavigate(() => {
     close();
   });
@@ -171,7 +167,6 @@
   $: currentContent = $contentsStore[currentFile] || '';
   $: currentLanguage = currentFile ? detectLanguageFromPath(currentFile) : 'plaintext';
 
-  // Re-highlight when content changes
   $: if (currentContent) {
     (async () => {
       await tick();
@@ -180,8 +175,7 @@
     })();
   }
 
-  // Apply highlighting whenever the viewer is opened
-  $: if ($isOpenStore) {
+  $: if ($isCodeViewerOpen) {
     (async () => {
       await tick();
       await ensureHighlighter();
@@ -190,67 +184,159 @@
   }
 </script>
 
-<!-- Show Code Button - Always in Top Right -->
-<button
-  on:click={toggle}
-  class="code-viewer-button fixed top-4 right-4 z-50"
-  style:display={fileList.length > 0 ? 'block' : 'none'}>
-  {#if $isOpenStore}
-    ✕ Close Code
-  {:else}
-    💻 View Code
-  {/if}
-</button>
+<!-- Floating trigger button (for non-inline pages) -->
+{#if fileList.length > 0 && !$useInlineCodeTrigger}
+  <button
+    on:click={toggle}
+    class="code-viewer-button"
+    style="position: fixed; top: 1rem; right: 1rem; z-index: 50;">
+    {#if $isCodeViewerOpen}
+      ESC close
+    {:else}
+      &lt;/&gt; source
+    {/if}
+  </button>
+{/if}
 
-{#if $isOpenStore}
-  <!-- Full Screen Overlay -->
+{#if $isCodeViewerOpen}
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="fixed inset-0 z-40 code-viewer-overlay" on:click={close}>
-    <!-- Modal Content -->
+  <div class="cv-overlay" on:click={close} transition:fade={{ duration: 200 }}>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="absolute inset-8 code-viewer-modal rounded-xl overflow-hidden flex flex-col" on:click|stopPropagation>
-      
-      <!-- Header with tabs only -->
-      <div class="p-4 border-b border-opacity-20 border-white">
-        <!-- File Name or Tabs -->
-        {#if fileList && fileList.length > 1}
-          <div class="code-viewer-tabs flex overflow-x-auto">
-            {#each fileList as path, idx (path)}
-              <button
-                class="code-viewer-tab"
-                class:active={$selectedIndexStore === idx}
-                on:click={() => switchToTab(idx)}
-                title={path}
-                type="button">
-                {path.split('/').pop()}
-              </button>
-            {/each}
+    <div class="cv-modal" on:click|stopPropagation>
+      <!-- Chrome bar -->
+      <div class="code-viewer-chrome">
+        <div class="code-viewer-chrome-left">
+          <div class="code-viewer-chrome-dots">
+            <span></span>
+            <span></span>
+            <span></span>
           </div>
-        {:else if fileList && fileList.length === 1}
-          <h3 class="text-lg font-medium text-blue-300">{fileList[0].split('/').pop()}</h3>
-        {:else}
-          <h3 class="text-lg font-medium text-gray-400">Code Viewer</h3>
-        {/if}
+          <span class="code-viewer-chrome-title">
+            {currentFile || 'source'}
+          </span>
+        </div>
+        <button class="code-viewer-close-btn" type="button" on:click={close}>
+          ESC
+        </button>
       </div>
 
-      <!-- Content area -->
-      <div class="flex-1 overflow-hidden code-viewer-content">
-        {#if fileList && fileList.length > 0 && currentContent}
+      <!-- Tabs (multi-file) -->
+      {#if fileList.length > 1}
+        <div class="code-viewer-tabs">
+          {#each fileList as path, idx (path)}
+            <button
+              class="code-viewer-tab"
+              class:active={$selectedIndexStore === idx}
+              on:click={() => switchToTab(idx)}
+              title={path}
+              type="button">
+              {path.split('/').pop()}
+            </button>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Code content -->
+      <div class="code-viewer-content">
+        {#if fileList.length > 0 && currentContent}
           {#key currentFile}
-            <pre class="code-viewer-pre h-full language-{currentLanguage}"><code class="code-viewer-code language-{currentLanguage}">{currentContent}</code></pre>
+            <pre class="code-viewer-pre language-{currentLanguage}"><code class="code-viewer-code language-{currentLanguage}">{currentContent}</code></pre>
           {/key}
         {:else}
-          <div class="flex items-center justify-center h-full text-center p-8">
-            <div class="space-y-4">
-              <div class="text-6xl opacity-20">📄</div>
-              <div class="text-xl text-gray-400">No code selected</div>
-              <div class="text-sm text-gray-500">Visit a page with code examples or append <code class="px-2 py-1 bg-black bg-opacity-30 rounded">#src=path/to/file.ext</code> to the URL</div>
-            </div>
+          <div class="cv-empty">
+            <p class="cv-empty-title">No source loaded</p>
+            <p class="cv-empty-hint">Navigate to a page with source files or append <code>#src=path/to/file</code> to the URL.</p>
           </div>
         {/if}
       </div>
     </div>
   </div>
 {/if}
+
+<style>
+  .cv-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(17, 17, 27, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(0.5rem, 2vw, 2rem);
+  }
+
+  .cv-modal {
+    width: 100%;
+    max-width: 1000px;
+    height: 100%;
+    max-height: 90vh;
+    background: linear-gradient(180deg, rgba(30, 30, 46, 0.98), rgba(24, 24, 37, 0.99));
+    border: 1px solid var(--surface1);
+    border-radius: 12px;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 24px 80px rgba(0, 0, 0, 0.65),
+      0 0 60px rgba(137, 180, 250, 0.05);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: cv-slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes cv-slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .cv-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .cv-empty-title {
+    color: var(--overlay1);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .cv-empty-hint {
+    color: var(--overlay0);
+    font-size: 0.78rem;
+    margin: 0.5rem 0 0;
+  }
+
+  .cv-empty-hint code {
+    background: rgba(49, 50, 68, 0.5);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.74rem;
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .cv-overlay {
+      padding: 0;
+    }
+
+    .cv-modal {
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+  }
+</style>
