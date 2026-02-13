@@ -142,7 +142,7 @@
     }
   }
 
-  function updateSnake(deltaTime: number) {
+  function updateSnake() {
     if (!gameRunning) return;
 
     // Compute target direction from keys
@@ -345,7 +345,7 @@
     if (cameraShake > 0) cameraShake *= 0.9;
     if (soundPulse > 0) soundPulse--;
 
-    updateSnake(deltaTime);
+    updateSnake();
 
     // Update particles
     particles = particles.filter(particle => {

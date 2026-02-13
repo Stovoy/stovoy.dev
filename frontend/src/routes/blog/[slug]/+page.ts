@@ -3,7 +3,8 @@ import { toHtml, extractMeta } from '$lib/markdown';
 
 const markdownFiles = import.meta.glob('content/*.md', {
   eager: true,
-  as: 'raw'
+  query: '?raw',
+  import: 'default'
 }) as Record<string, string>;
 
 export const prerender = true;

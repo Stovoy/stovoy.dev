@@ -12,7 +12,7 @@
 <p class="mb-4 opacity-80">Click any file below or append <code>#src=path/to/file.rs</code> to the URL, then click the View Code button.</p>
 
 <ul class="list-disc list-inside space-y-1">
-  {#each examples as path}
+  {#each examples as path (path)}
     <li>
       <a href={`#src=${encodeURIComponent(path)}`} class="text-blue-600 dark:text-blue-400 hover:underline">{path}</a>
     </li>

@@ -25,24 +25,60 @@ fn main() {
         return;
     }
 
-    let dist_blog_dir = workspace_root.join("dist/blog");
+    let dist_dir = workspace_root.join("dist");
+    if fs::create_dir_all(&dist_dir).is_err() {
+        return;
+    }
+    let probe_path = dist_dir.join(".build_probe");
+    if File::create(&probe_path)
+        .and_then(|mut f| f.write_all(b"probe"))
+        .is_err()
+    {
+        return;
+    }
+    let _ = fs::remove_file(&probe_path);
+
+    let dist_blog_dir = dist_dir.join("blog");
     if fs::create_dir_all(&dist_blog_dir).is_err() {
         return;
     }
 
     let mut metas = Vec::new();
 
-    for entry in fs::read_dir(&content_dir).unwrap() {
-        let entry = entry.unwrap();
+    let entries = match fs::read_dir(&content_dir) {
+        Ok(entries) => entries,
+        Err(err) => {
+            println!("cargo:warning=Skipping blog build, cannot read content dir: {err}");
+            return;
+        }
+    };
+
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => {
+                println!("cargo:warning=Skipping content entry: {err}");
+                continue;
+            }
+        };
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("md") {
             continue;
         }
 
-        let slug = path.file_stem().unwrap().to_string_lossy().to_string();
+        let slug = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "untitled".to_string());
 
         let mut markdown = String::new();
-        File::open(&path).unwrap().read_to_string(&mut markdown).unwrap();
+        if let Err(err) = File::open(&path).and_then(|mut f| f.read_to_string(&mut markdown)) {
+            println!(
+                "cargo:warning=Skipping blog file '{}': {err}",
+                path.to_string_lossy()
+            );
+            continue;
+        }
 
         let (title, date_str) = extract_title_date(&markdown, &path);
 
@@ -54,9 +90,18 @@ fn main() {
         html_output = transform_img_paths(&html_output);
 
         let slug_dir = dist_blog_dir.join(&slug);
-        fs::create_dir_all(&slug_dir).unwrap();
-        let mut file = File::create(slug_dir.join("index.html")).unwrap();
-        file.write_all(html_output.as_bytes()).unwrap();
+        if let Err(err) = fs::create_dir_all(&slug_dir) {
+            println!("cargo:warning=Skipping blog '{slug}', cannot create output dir: {err}");
+            continue;
+        }
+        let output_file = slug_dir.join("index.html");
+        if let Err(err) = File::create(&output_file).and_then(|mut f| f.write_all(html_output.as_bytes())) {
+            println!(
+                "cargo:warning=Skipping blog '{slug}', cannot write '{}': {err}",
+                output_file.to_string_lossy()
+            );
+            continue;
+        }
 
         metas.push(BlogMeta {
             title,
@@ -67,13 +112,29 @@ fn main() {
 
     metas.sort_by(|a, b| b.date.cmp(&a.date));
 
-    let meta_json = serde_json::to_string(&metas).unwrap();
+    let meta_json = match serde_json::to_string(&metas) {
+        Ok(json) => json,
+        Err(err) => {
+            println!("cargo:warning=Skipping blog metadata serialization: {err}");
+            return;
+        }
+    };
 
-    let mut meta_file = File::create(dist_blog_dir.join("blogs.json")).unwrap();
-    meta_file.write_all(meta_json.as_bytes()).unwrap();
+    let meta_path = dist_blog_dir.join("blogs.json");
+    if let Err(err) = File::create(&meta_path).and_then(|mut f| f.write_all(meta_json.as_bytes())) {
+        println!(
+            "cargo:warning=Skipping write of '{}': {err}",
+            meta_path.to_string_lossy()
+        );
+    }
 
-    let mut root_meta_file = File::create(workspace_root.join("dist/blogs.json")).unwrap();
-    root_meta_file.write_all(meta_json.as_bytes()).unwrap();
+    let root_meta_path = workspace_root.join("dist/blogs.json");
+    if let Err(err) = File::create(&root_meta_path).and_then(|mut f| f.write_all(meta_json.as_bytes())) {
+        println!(
+            "cargo:warning=Skipping write of '{}': {err}",
+            root_meta_path.to_string_lossy()
+        );
+    }
 
     generate_rss(&workspace_root, &metas);
 
@@ -99,8 +160,20 @@ fn copy_static_images(root: &Path) {
         return;
     }
     let target = root.join("dist/img");
-    fs::create_dir_all(&target).unwrap();
-    copy_dir_recursively(&source, &target).unwrap();
+    if let Err(err) = fs::create_dir_all(&target) {
+        println!(
+            "cargo:warning=Skipping static image copy, cannot create '{}': {err}",
+            target.to_string_lossy()
+        );
+        return;
+    }
+    if let Err(err) = copy_dir_recursively(&source, &target) {
+        println!(
+            "cargo:warning=Skipping static image copy from '{}' to '{}': {err}",
+            source.to_string_lossy(),
+            target.to_string_lossy()
+        );
+    }
 }
 
 fn copy_dir_recursively(src: &Path, dst: &Path) -> std::io::Result<()> {
@@ -189,8 +262,13 @@ fn generate_rss(root: &Path, metas: &[BlogMeta]) {
         channel_title, channel_link, channel_description, items_xml
     );
 
-    let mut file = File::create(root.join("dist/rss.xml")).unwrap();
-    file.write_all(rss_xml.as_bytes()).unwrap();
+    let output_path = root.join("dist/rss.xml");
+    if let Err(err) = File::create(&output_path).and_then(|mut f| f.write_all(rss_xml.as_bytes())) {
+        println!(
+            "cargo:warning=Skipping write of '{}': {err}",
+            output_path.to_string_lossy()
+        );
+    }
 }
 
 fn escape_xml(input: &str) -> String {

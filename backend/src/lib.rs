@@ -14,7 +14,7 @@ pub fn build_router(static_dir: &str) -> Router {
     Router::new()
         .route("/healthz", get(healthz))
         .route("/api/ping", get(ping))
-        .route("/source/*path", get(source_handler))
+        .route("/source/{*path}", get(source_handler))
         .route("/api/blogs", get(blogs_handler))
         .nest_service("/assets", static_service.clone())
         .fallback_service(static_service)

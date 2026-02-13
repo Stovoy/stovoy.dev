@@ -8,13 +8,14 @@ services:
       - "8080"
     volumes:
       - .:/workspace
+      - backend-target:/workspace/target
       - cargo-git:/usr/local/cargo/git
       - cargo-registry:/usr/local/cargo/registry
 
   caddy:
     build:
       context: .
-      target: caddy
+      target: caddy-dev
     restart: unless-stopped
     ports:
       - "8080:80"
@@ -22,8 +23,6 @@ services:
       - backend
       - frontend
     image: stovoy-dev-site
-    volumes:
-      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
 
   frontend:
     build:
@@ -31,9 +30,15 @@ services:
       target: frontend-dev-node
     expose:
       - "8081"
+    command: sh -c "pnpm --dir frontend install --frozen-lockfile && pnpm --dir frontend dev"
     volumes:
       - .:/workspace
+      - frontend-node-modules:/workspace/frontend/node_modules
+      - frontend-pnpm-store:/pnpm/store
 
 volumes:
+  backend-target:
   cargo-git:
   cargo-registry:
+  frontend-node-modules:
+  frontend-pnpm-store:

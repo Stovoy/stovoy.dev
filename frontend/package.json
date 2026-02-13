@@ -3,29 +3,35 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite dev --port 8081 --host 0.0.0.0",
-    "build": "rm -rf .svelte-kit && vite build",
+    "build": "rm -rf .svelte-kit && svelte-kit sync && vite build",
     "preview": "vite preview --port 8081",
     "lint": "eslint src --ext .js,.ts,.svelte",
     "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "@sveltejs/adapter-static": "^3.0.0",
-    "@sveltejs/kit": "^2.21.1",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-svelte": "^2.32.0",
-    "prettier": "^3.2.5",
-    "svelte": "^5.33.10",
-    "tailwindcss": "^3.4.4",
-    "postcss": "^8.4.33",
-    "autoprefixer": "^10.4.17",
-    "svelte-preprocess": "^5.1.0",
-    "@typescript-eslint/eslint-plugin": "^7.4.0",
-    "@typescript-eslint/parser": "^7.4.0",
-    "typescript": "^5.4.2",
-    "vite": "^6.3.5"
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.51.0",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^10.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.15.0",
+    "globals": "^17.3.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
+    "svelte": "^5.50.3",
+    "svelte-preprocess": "^6.0.3",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }

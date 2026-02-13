@@ -1,7 +1,33 @@
-.svelte-kit
-frontend/.svelte-kit
-target
-node_modules
-frontend/node_modules
-dist
-**/tmp
+*
+
+# Top-level manifests and Docker config used by build stages.
+!Cargo.toml
+!Cargo.lock
+!package.json
+!Dockerfile
+!Caddyfile.dev
+!Caddyfile.prod
+
+# Rust workspace sources and manifests.
+!backend/
+!backend/**
+!stovoy_source/
+!stovoy_source/**
+
+# Frontend sources and lockfiles.
+!frontend/
+!frontend/**
+!frontend/package.json
+!frontend/pnpm-lock.yaml
+
+# Static/blog content consumed by build.rs and static site build.
+!content/
+!content/**
+
+# Re-exclude generated artifacts inside allowed paths.
+backend/target/
+stovoy_source/target/
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+dist/

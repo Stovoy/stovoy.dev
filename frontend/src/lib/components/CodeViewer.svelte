@@ -93,7 +93,7 @@
           } else {
             entries[path] = `Failed to load ${path}: ${res.statusText}`;
           }
-        } catch (_) {
+        } catch {
           entries[path] = `Error loading ${path}`;
         }
       })
@@ -254,4 +254,3 @@
     </div>
   </div>
 {/if}
-

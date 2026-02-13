@@ -4,7 +4,8 @@ import { extractMeta } from '$lib/markdown';
 
 const markdownFiles = import.meta.glob('content/*.md', {
   eager: true,
-  as: 'raw'
+  query: '?raw',
+  import: 'default'
 }) as Record<string, string>;
 
 const blogs: BlogMeta[] = Object.entries(markdownFiles).map(([path, markdown]) =>

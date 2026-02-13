@@ -98,13 +98,13 @@ function processFormatting(str: string): string {
 }
 
 function renderInline(text: string): string {
-  const imgRegex = /!\[([^\]]*)\]\(([^\)]+)\)/g;
+  const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
   let str = text.replace(imgRegex, (_m, alt: string, url: string) => {
     const resolved = url.startsWith('http') || url.startsWith('/') ? url : `/img/${url}`;
     return `<img src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}">`;
   });
 
-  const linkRegex = /\[([^\]]+)\]\(([^\)]+)\)/g;
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
   let result = '';
   let lastIndex = 0;
 

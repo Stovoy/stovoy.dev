@@ -58,6 +58,7 @@ COPY --from=chef-planner /app/recipe.json ./recipe.json
 # Compile dependency graph for native target.
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo chef cook --release --recipe-path recipe.json
 
 
@@ -84,6 +85,7 @@ COPY . .
 # Build the back-end binary.
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
     cargo build --release -p stovoy-dev-backend-axum
 
 
@@ -113,9 +115,6 @@ RUN apk add --no-cache musl-dev openssl-dev pkgconfig build-base git && \
     cargo install cargo-watch --locked && \
     rustup target add wasm32-unknown-unknown
 
-COPY --from=chef-cook /app/target /workspace/target
-COPY . .
-
 EXPOSE 8080
 
 CMD ["cargo", "watch", "-x", "run -p stovoy-dev-backend-axum"]
@@ -123,11 +122,12 @@ CMD ["cargo", "watch", "-x", "run -p stovoy-dev-backend-axum"]
 
 FROM node:20-bullseye-slim AS frontend-dev-node
 WORKDIR /workspace
-ENV PNPM_HOME=/usr/local/share/pnpm
+ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
-RUN npm install -g pnpm
-COPY frontend/package.json ./frontend/
-RUN cd frontend && pnpm install
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml ./frontend/
+RUN --mount=type=cache,target=/pnpm/store,sharing=locked \
+    pnpm --dir frontend install --frozen-lockfile
 EXPOSE 8081
 CMD ["pnpm","--dir","frontend","dev"]
 
@@ -143,3 +143,6 @@ FROM caddy:2-alpine AS caddy
 
 COPY Caddyfile.prod /etc/caddy/Caddyfile
 COPY --from=site-build-svelte /site /site
+
+FROM caddy:2-alpine AS caddy-dev
+COPY Caddyfile.dev /etc/caddy/Caddyfile

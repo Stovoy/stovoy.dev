@@ -17,7 +17,11 @@
   let cursorVisible = true;
   let showRest = false;
 
-  const mods = import.meta.glob('content/*.md', { eager: true, as: 'raw' }) as Record<string, string>;
+  const mods = import.meta.glob('content/*.md', {
+    eager: true,
+    query: '?raw',
+    import: 'default'
+  }) as Record<string, string>;
   let blogs: { title: string; date: string; slug: string }[] = Object.entries(mods)
     .map(([path, text]) => {
       const lines = text.split(/\r?\n/);
@@ -95,7 +99,7 @@
 
 <div class="terminal">
   <div class="fake-command-line">
-    {#each segments as seg}
+    {#each segments as seg, idx (idx)}
       <span class={seg.class}>{seg.text}</span>
     {/each}
     {#if !showRest}
@@ -129,7 +133,7 @@
           <span class="cmd-user">stovoy</span><span class="cmd-host">@devbox</span><span class="cmd-path">&nbsp;~&nbsp;</span><span class="cmd-prompt">$&nbsp;</span><span class="cmd-cmd">ls blog</span>
         </div>
         <ul class="links">
-          {#each blogs.slice(0, 5) as blog}
+          {#each blogs.slice(0, 5) as blog (blog.slug)}
             <li>
               <a href={`/blog/${blog.slug}`}>{blog.title}</a>
               <span class="opacity-60 text-sm">&nbsp;{blog.date}</span>

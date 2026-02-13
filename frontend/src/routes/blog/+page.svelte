@@ -5,7 +5,7 @@
 <h1 class="text-2xl font-bold mb-4">Blog</h1>
 
 <ul class="space-y-2">
-  {#each data.blogs as blog}
+  {#each data.blogs as blog (blog.slug)}
     <li>
       <a href={"/blog/" + blog.slug} class="text-blue-600 hover:underline">
         {blog.title}
