@@ -5,3 +5,5 @@ dist/
 target/
 frontend/node_modules/
 frontend/.svelte-kit/
+frontend/test-results/
+frontend/test-artifacts/

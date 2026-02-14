@@ -26,6 +26,11 @@
       desc: 'A live multiplayer browser game rebuilt with an ECS architecture for 2025.'
     },
     {
+      name: 'moire-simulator',
+      href: '/projects/moire-simulator',
+      desc: 'An interactive WebGPU moire simulator with deep controls for interference, color, warp, and animation.'
+    },
+    {
       name: 'snake',
       href: '/game/snake',
       desc: 'A polished snake mini-game with neon canvas visuals and responsive controls.'
@@ -36,9 +41,7 @@
   let cursorVisible = true;
   let showRest = false;
 
-  // Track which sections have been revealed
   let revealedSections: Record<string, boolean> = {};
-  let allRevealed = false;
 
   type BlogItem = {
     title: string;
@@ -98,7 +101,6 @@
   }
 
   function revealAll() {
-    allRevealed = true;
     revealedSections = {
       'projects-section': true,
       'blog-section': true,
@@ -154,9 +156,6 @@
     };
   });
 
-  function isSectionRevealed(id: string): boolean {
-    return !!revealedSections[id];
-  }
 </script>
 
 <div class="terminal-stage">
@@ -205,7 +204,7 @@
           </section>
 
           <!-- Projects section -->
-          {#if isSectionRevealed('projects-section')}
+          {#if revealedSections['projects-section']}
             <section class="output-section" id="projects-section" in:fly={{ y: 16, duration: 350, easing: cubicOut }}>
               <div class="section-cmd">
                 <span class="cmd-prompt">$&nbsp;</span><span class="cmd-cmd">ls projects</span>
@@ -230,7 +229,7 @@
           {/if}
 
           <!-- Blog section -->
-          {#if blogs.length && isSectionRevealed('blog-section')}
+          {#if blogs.length && revealedSections['blog-section']}
             <section class="output-section" id="blog-section" in:fly={{ y: 16, duration: 350, easing: cubicOut }}>
               <div class="section-cmd">
                 <span class="cmd-prompt">$&nbsp;</span><span class="cmd-cmd">ls blog</span>
@@ -257,7 +256,7 @@
           {/if}
 
           <!-- Contact section -->
-          {#if isSectionRevealed('contact-section')}
+          {#if revealedSections['contact-section']}
             <section class="output-section" id="contact-section" in:fly={{ y: 16, duration: 350, easing: cubicOut }}>
               <div class="section-cmd">
                 <span class="cmd-prompt">$&nbsp;</span><span class="cmd-cmd">contact</span>

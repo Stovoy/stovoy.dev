@@ -9,5 +9,8 @@ export default defineConfig({
   testDir: 'tests',
   use: {
     baseURL: 'http://localhost:8081',
+    launchOptions: {
+      args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
+    },
   },
 });
